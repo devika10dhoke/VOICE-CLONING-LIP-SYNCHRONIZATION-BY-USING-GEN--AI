@@ -1,0 +1,41 @@
+# Core
+numpy>=1.24.0
+scipy>=1.11.0
+tqdm>=4.66.0
+PyYAML>=6.0.1
+
+# Video / Audio processing
+opencv-python>=4.9.0
+ffmpeg-python>=0.2.0
+moviepy>=1.0.3
+librosa>=0.10.1
+soundfile>=0.12.1
+
+# Face detection / alignment (used by video_analysis + lip_sync)
+face_alignment>=1.4.1
+mediapipe>=0.10.9
+
+# Speech-to-text
+openai-whisper>=20231117
+
+# Translation
+transformers>=4.38.0
+sentencepiece>=0.1.99
+torch>=2.1.0
+sacremoses>=0.1.1
+
+# Voice cloning / TTS
+TTS>=0.22.0            # Coqui TTS (XTTS-v2)
+
+# Lip-sync (Wav2Lip) runtime deps
+numba>=0.58.0
+batch-face>=1.4.0
+
+# UI / demo
+streamlit>=1.32.0
+gradio>=4.44.0
+
+# Dev / testing
+pytest>=8.0.0
+black>=24.1.0
+flake8>=7.0.0

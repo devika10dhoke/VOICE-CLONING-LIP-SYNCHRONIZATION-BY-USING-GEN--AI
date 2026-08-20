@@ -1,0 +1,45 @@
+# =========================================================
+# Voice Cloning & Lip Synchronization — Pipeline Configuration
+# =========================================================
+
+device: "cuda"          # "cuda" or "cpu"
+
+video_analysis:
+  fps_sample_rate: 25          # frames per second to process
+  face_detector: "mediapipe"   # "mediapipe" or "face_alignment"
+  audio_sample_rate: 16000
+
+transcription:
+  model_size: "medium"         # tiny | base | small | medium | large-v3
+  language: "auto"             # "auto" for auto-detect, or ISO code e.g. "en"
+  task: "transcribe"
+
+translation:
+  model_name: "facebook/nllb-200-distilled-600M"
+  source_lang: "eng_Latn"       # NLLB FLORES-200 language codes
+  target_lang: "hin_Deva"
+  max_length: 400
+
+voice_cloning:
+  model_name: "tts_models/multilingual/multi-dataset/xtts_v2"
+  speaker_reference_audio: "assets/sample/voice_ref.wav"
+  target_language: "hi"          # short ISO code expected by XTTS
+  sample_rate: 24000
+
+lip_sync:
+  checkpoint_path: "weights/wav2lip_gan.pth"
+  resize_factor: 1
+  pads: [0, 10, 0, 0]             # top, bottom, left, right face-crop padding
+  face_det_batch_size: 16
+  wav2lip_batch_size: 128
+  nosmooth: false
+
+paths:
+  input_dir: "assets/sample"
+  output_dir: "outputs"
+  temp_dir: "temp"
+  weights_dir: "weights"
+
+logging:
+  level: "INFO"
+  log_file: "pipeline.log"

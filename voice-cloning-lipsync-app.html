@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Cloning & Lip-Sync Studio</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --surface: #121722;
+    --surface-2: #1a2130;
+    --border: #262e3f;
+    --text: #eef1f7;
+    --text-secondary: #9aa5b8;
+    --accent: #7c8cff;
+    --accent-2: #35d0a8;
+    --warn: #f0c98a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header { text-align: center; margin-bottom: 40px; }
+  .badge {
+    display: inline-block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--accent-2); background: rgba(53,208,168,0.1); border: 1px solid rgba(53,208,168,0.3);
+    padding: 6px 14px; border-radius: 999px; margin-bottom: 18px;
+  }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); margin: 0 0 12px; }
+  .subtitle { color: var(--text-secondary); max-width: 560px; margin: 0 auto; }
+
+  .live-notice {
+    background: rgba(124,140,255,0.08);
+    border: 1px solid rgba(124,140,255,0.3);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 0.88rem;
+    color: #c3c9ff;
+    margin-bottom: 32px;
+  }
+  .live-notice b { color: var(--accent); }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .panel h2 { font-size: 1.05rem; margin: 0 0 6px; }
+  .panel .desc { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 20px; }
+
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: rgba(124,140,255,0.05); }
+  .dropzone input { display: none; }
+  .dropzone .icon { font-size: 28px; margin-bottom: 10px; }
+
+  .file-info {
+    display: none;
+    align-items: center; gap: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-top: 14px;
+    font-size: 0.85rem;
+  }
+  .file-info.show { display: flex; }
+  .file-info .name { font-weight: 600; }
+  .file-info .meta { color: var(--text-secondary); }
+
+  video, audio { width: 100%; border-radius: 10px; margin-top: 14px; background: #000; }
+
+  canvas#waveform { width: 100%; height: 80px; margin-top: 14px; border-radius: 8px; background: var(--surface-2); }
+
+  .row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 220px; }
+
+  label.field-label { display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; }
+  select {
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    font-size: 0.9rem;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 26px; border-radius: 10px; font-weight: 600; font-size: 0.95rem;
+    border: none; cursor: pointer; transition: transform .15s, opacity .15s;
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #0b0e14; }
+  .btn-primary:not(:disabled):hover { transform: translateY(-1px); }
+  .btn-full { width: 100%; justify-content: center; }
+
+  .pipeline { margin-top: 28px; }
+  .stage-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .stage-row:last-child { border-bottom: none; }
+  .stage-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0;
+    background: var(--surface-2); color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .stage-dot.active { background: var(--accent); color: #0b0e14; border-color: var(--accent); }
+  .stage-dot.done { background: var(--accent-2); color: #06251c; border-color: var(--accent-2); }
+  .stage-label { flex: 1; }
+  .stage-label .name { font-weight: 600; }
+  .stage-label .note { color: var(--text-secondary); font-size: 0.8rem; }
+  .stage-status { font-size: 0.78rem; color: var(--text-secondary); min-width: 70px; text-align: right; }
+
+  .output-panel { display: none; }
+  .output-panel.show { display: block; }
+
+  .demo-flag {
+    background: rgba(240,201,138,0.1);
+    border: 1px solid rgba(240,201,138,0.35);
+    color: var(--warn);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.82rem;
+    margin-top: 14px;
+  }
+
+  .code-block {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8rem; color: #b7c4dd; overflow-x: auto; white-space: pre; margin-top: 10px;
+  }
+
+  footer { text-align: center; color: var(--text-secondary); font-size: 0.8rem; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="badge">Gen-AI Video Dubbing</span>
+    <h1>Voice Cloning & Lip-Sync Studio</h1>
+    <p class="subtitle">Upload a video, pick a target language, and walk through the dubbing pipeline.</p>
+  </header>
+
+  <div class="live-notice">
+    <b>What's real here:</b> file upload, video/audio playback, and live audio-waveform extraction all run
+    for real in your browser right now. <b>What's simulated:</b> the actual transcription/translation/voice-cloning/
+    lip-sync AI steps — those models (Whisper, NLLB, XTTS-v2, Wav2Lip) need a GPU-backed Python server to run,
+    which this static page can't provide. The code to run them for real is in the connect panel at the bottom.
+  </div>
+
+  <div class="panel">
+    <h2>1. Source video</h2>
+    <div class="desc">MP4, MOV, or WebM — processed entirely in your browser, never uploaded anywhere.</div>
+    <div class="dropzone" id="dropzone">
+      <div class="icon">🎬</div>
+      <div>Drag & drop a video here, or click to browse</div>
+      <input type="file" id="videoInput" accept="video/*">
+    </div>
+    <div class="file-info" id="videoInfo">
+      <div>📁</div>
+      <div>
+        <div class="name" id="videoName"></div>
+        <div class="meta" id="videoMeta"></div>
+      </div>
+    </div>
+    <video id="videoPreview" controls style="display:none;"></video>
+    <canvas id="waveform" style="display:none;"></canvas>
+  </div>
+
+  <div class="panel">
+    <h2>2. Voice reference (optional)</h2>
+    <div class="desc">A clean clip of the target voice. Leave empty to use the video's own audio.</div>
+    <div class="dropzone" id="audioDropzone">
+      <div class="icon">🎙️</div>
+      <div>Drag & drop an audio clip, or click to browse</div>
+      <input type="file" id="audioInput" accept="audio/*">
+    </div>
+    <div class="file-info" id="audioInfo">
+      <div>📁</div>
+      <div>
+        <div class="name" id="audioName"></div>
+        <div class="meta" id="audioMeta"></div>
+      </div>
+    </div>
+    <audio id="audioPreview" controls style="display:none;"></audio>
+  </div>
+
+  <div class="panel">
+    <h2>3. Settings</h2>
+    <div class="row">
+      <div>
+        <label class="field-label">Target language</label>
+        <select id="targetLang">
+          <option value="hi">Hindi</option>
+          <option value="fr">French</option>
+          <option value="es">Spanish</option>
+          <option value="de">German</option>
+          <option value="ja">Japanese</option>
+          <option value="zh-cn">Mandarin Chinese</option>
+          <option value="ar">Arabic</option>
+          <option value="pt">Portuguese</option>
+          <option value="ru">Russian</option>
+          <option value="ko">Korean</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top: 22px;">
+      <button class="btn btn-primary btn-full" id="runBtn" disabled>🚀 Run dubbing pipeline</button>
+    </div>
+  </div>
+
+  <div class="panel pipeline" id="pipelinePanel" style="display:none;">
+    <h2>Pipeline progress</h2>
+    <div id="stages"></div>
+  </div>
+
+  <div class="panel output-panel" id="outputPanel">
+    <h2>4. Result</h2>
+    <video id="outputVideo" controls></video>
+    <div class="demo-flag">
+      ⚠️ This is your original video played back with an audio pipeline visualization — real dubbed output
+      requires the Python backend (see below) since it needs actual GPU inference.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Connect the real backend</h2>
+    <div class="desc">This UI's structure matches <code>gradio_app.py</code> / <code>app.py</code> in the full repo. To get genuine AI-generated dubbing, run:</div>
+    <div class="code-block">pip install -r requirements.txt
+python -m src.pipeline --input video.mp4 --target-lang hi --output dubbed.mp4
+
+# or launch a real upload-and-run website:
+python gradio_app.py   # → http://localhost:7860</div>
+  </div>
+
+  <footer>Runs entirely client-side. No files leave your browser.</footer>
+</div>
+
+<script>
+(function () {
+  const videoInput = document.getElementById('videoInput');
+  const dropzone = document.getElementById('dropzone');
+  const videoInfo = document.getElementById('videoInfo');
+  const videoName = document.getElementById('videoName');
+  const videoMeta = document.getElementById('videoMeta');
+  const videoPreview = document.getElementById('videoPreview');
+  const waveformCanvas = document.getElementById('waveform');
+
+  const audioInput = document.getElementById('audioInput');
+  const audioDropzone = document.getElementById('audioDropzone');
+  const audioInfo = document.getElementById('audioInfo');
+  const audioName = document.getElementById('audioName');
+  const audioMeta = document.getElementById('audioMeta');
+  const audioPreview = document.getElementById('audioPreview');
+
+  const runBtn = document.getElementById('runBtn');
+  const pipelinePanel = document.getElementById('pipelinePanel');
+  const stagesEl = document.getElementById('stages');
+  const outputPanel = document.getElementById('outputPanel');
+  const outputVideo = document.getElementById('outputVideo');
+
+  let videoFile = null;
+  let audioFile = null;
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  }
+
+  function setupDropzone(zone, input, onFile) {
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('drag');
+      if (e.dataTransfer.files.length) onFile(e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', () => {
+      if (input.files.length) onFile(input.files[0]);
+    });
+  }
+
+  setupDropzone(dropzone, videoInput, handleVideoFile);
+  setupDropzone(audioDropzone, audioInput, handleAudioFile);
+
+  function handleVideoFile(file) {
+    videoFile = file;
+    videoName.textContent = file.name;
+    videoMeta.textContent = `${file.type || 'video'} · ${fmtSize(file.size)}`;
+    videoInfo.classList.add('show');
+
+    const url = URL.createObjectURL(file);
+    videoPreview.src = url;
+    videoPreview.style.display = 'block';
+    waveformCanvas.style.display = 'block';
+    drawWaveform(file, waveformCanvas);
+
+    updateRunButton();
+  }
+
+  function handleAudioFile(file) {
+    audioFile = file;
+    audioName.textContent = file.name;
+    audioMeta.textContent = `${file.type || 'audio'} · ${fmtSize(file.size)}`;
+    audioInfo.classList.add('show');
+
+    const url = URL.createObjectURL(file);
+    audioPreview.src = url;
+    audioPreview.style.display = 'block';
+  }
+
+  function updateRunButton() {
+    runBtn.disabled = !videoFile;
+  }
+
+  // Real audio decoding + waveform rendering via Web Audio API
+  async function drawWaveform(file, canvas) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+      const rawData = audioBuffer.getChannelData(0);
+
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.clientWidth || 900;
+      const height = 80;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      const g = canvas.getContext('2d');
+      g.scale(dpr, dpr);
+      g.clearRect(0, 0, width, height);
+
+      const samples = width;
+      const blockSize = Math.floor(rawData.length / samples);
+      const mid = height / 2;
+
+      g.strokeStyle = '#7c8cff';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      for (let i = 0; i < samples; i++) {
+        let sum = 0;
+        const start = i * blockSize;
+        for (let j = 0; j < blockSize; j++) sum += Math.abs(rawData[start + j] || 0);
+        const avg = sum / blockSize;
+        const y = avg * height * 3.2;
+        g.moveTo(i, mid - y);
+        g.lineTo(i, mid + y);
+      }
+      g.stroke();
+      ctx.close();
+    } catch (err) {
+      // Some containers (e.g. certain MOV variants) aren't decodable by Web Audio directly — that's fine, skip.
+      canvas.style.display = 'none';
+    }
+  }
+
+  const STAGES = [
+    { name: 'Video analysis', note: 'Extracting frames, audio track, face regions' },
+    { name: 'Transcription', note: 'Speech-to-text on source audio (Whisper)' },
+    { name: 'Translation', note: 'Translating transcript to target language (NLLB-200)' },
+    { name: 'Voice cloning', note: 'Synthesizing speech in the cloned voice (XTTS-v2)' },
+    { name: 'Lip synchronization', note: 'Matching mouth movement to new audio (Wav2Lip)' },
+  ];
+
+  function renderStages() {
+    stagesEl.innerHTML = '';
+    STAGES.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'stage-row';
+      row.id = 'stage-' + i;
+      row.innerHTML = `
+        <div class="stage-dot" id="dot-${i}">${i + 1}</div>
+        <div class="stage-label">
+          <div class="name">${s.name}</div>
+          <div class="note">${s.note}</div>
+        </div>
+        <div class="stage-status" id="status-${i}">Waiting</div>
+      `;
+      stagesEl.appendChild(row);
+    });
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function runPipeline() {
+    runBtn.disabled = true;
+    runBtn.textContent = '⏳ Running...';
+    pipelinePanel.style.display = 'block';
+    outputPanel.classList.remove('show');
+    renderStages();
+
+    for (let i = 0; i < STAGES.length; i++) {
+      const dot = document.getElementById('dot-' + i);
+      const status = document.getElementById('status-' + i);
+      dot.classList.add('active');
+      status.textContent = 'Processing…';
+      await sleep(650 + Math.random() * 500);
+      dot.classList.remove('active');
+      dot.classList.add('done');
+      dot.textContent = '✓';
+      status.textContent = 'Done';
+    }
+
+    // "Output" is an honest passthrough of the source video — see demo-flag note.
+    outputVideo.src = videoPreview.src;
+    outputPanel.classList.add('show');
+    outputPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    runBtn.disabled = false;
+    runBtn.textContent = '🚀 Run dubbing pipeline';
+  }
+
+  runBtn.addEventListener('click', runPipeline);
+})();
+</script>
+
+</body>
+</html>
